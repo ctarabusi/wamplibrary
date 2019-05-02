@@ -14,15 +14,19 @@ class Connection(
         private val outgoing: SendChannel<String>
 ) : CoroutineScope by CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher()) {
 
-    fun forEachMessage(exceptionHandler: (Throwable) -> Unit) =
-            launch {
-                incoming.consumeEach { message ->
-                    try {
-                        Log.d("WAMP", "message received: $message")
-                        outgoing.send(message)
-                    } catch (throwable: Throwable) {
-                        exceptionHandler(throwable)
-                    }
+    fun forEachMessage(exceptionHandler: (Throwable) -> Unit, action: suspend (String) -> Unit) =
+        launch {
+            incoming.consumeEach { message ->
+                try {
+                    Log.d("WAMP", "message received: $message")
+                    action(message)
+                } catch (throwable: Throwable) {
+                    exceptionHandler(throwable)
                 }
             }
+        }
+
+    fun send(message: Message) {
+
+    }
 }
