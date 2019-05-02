@@ -14,7 +14,7 @@ class Connection(
         private val outgoing: SendChannel<String>
 ) : CoroutineScope by CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher()) {
 
-    fun forEachMessage(exceptionHandler: (Throwable) -> Unit, action: suspend (String) -> Unit) =
+    fun forEachMessage(exceptionHandler: (Throwable) -> Unit) =
             launch {
                 incoming.consumeEach { message ->
                     try {
