@@ -42,12 +42,10 @@ interface RequestMessage {
     val requestId: Long
 }
 
-@Serializable
 abstract class Message {
     open fun toJson(): String = ""
 }
 
-@Serializable
 data class Hello(val realm: String, val details: WampDict) : Message() {
     companion object {
         val TYPE: Number = 1
@@ -66,28 +64,24 @@ data class Hello(val realm: String, val details: WampDict) : Message() {
     }
 }
 
-@Serializable
 data class Welcome(val session: Long, val details: WampDict) : Message() {
     companion object {
         const val TYPE = 2
     }
 }
 
-@Serializable
 data class Abort(val details: WampDict, val reason: String) : Message() {
     companion object {
         const val TYPE = 3
     }
 }
 
-@Serializable
 data class Goodbye(val details: WampDict, val reason: String) : Message() {
     companion object {
         const val TYPE = 6
     }
 }
 
-@Serializable
 data class Publish(
         override val requestId: Long,
         val options: WampDict?,
@@ -100,42 +94,36 @@ data class Publish(
     }
 }
 
-@Serializable
 data class Published(override val requestId: Long, val publication: Long) : Message(), RequestMessage {
     companion object {
         const val TYPE = 17
     }
 }
 
-@Serializable
 data class Subscribe(override val requestId: Long, val options: WampDict, val topic: TopicPattern) : Message(), RequestMessage {
     companion object {
         const val TYPE = 32
     }
 }
 
-@Serializable
 data class Subscribed(override val requestId: Long, val subscription: Long) : Message(), RequestMessage {
     companion object {
         const val TYPE = 33
     }
 }
 
-@Serializable
 data class Unsubscribe(override val requestId: Long, val subscription: Long) : Message(), RequestMessage {
     companion object {
         const val TYPE = 34
     }
 }
 
-@Serializable
 data class Unsubscribed(override val requestId: Long) : Message(), RequestMessage {
     companion object {
         const val TYPE = 35
     }
 }
 
-@Serializable
 data class Event(
         val subscription: Long,
         val publication: Long,
