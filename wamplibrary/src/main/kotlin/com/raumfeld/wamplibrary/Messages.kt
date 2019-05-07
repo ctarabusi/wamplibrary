@@ -66,19 +66,19 @@ data class Hello(val realm: String, val details: WampDict) : Message() {
 
 data class Welcome(val session: Long, val details: WampDict) : Message() {
     companion object {
-        const val TYPE = 2
+        val TYPE: Number = 2
     }
 }
 
 data class Abort(val details: WampDict, val reason: String) : Message() {
     companion object {
-        const val TYPE = 3
+        val TYPE: Number = 3
     }
 }
 
 data class Goodbye(val details: WampDict, val reason: String) : Message() {
     companion object {
-        const val TYPE = 6
+        val TYPE: Number = 6
     }
 }
 
@@ -90,25 +90,25 @@ data class Publish(
         val argumentsKw: WampDict? = null
 ) : Message(), RequestMessage {
     companion object {
-        const val TYPE = 16
+        val TYPE: Number = 16
     }
 }
 
 data class Published(override val requestId: Long, val publication: Long) : Message(), RequestMessage {
     companion object {
-        const val TYPE = 17
+        val TYPE: Number = 17
     }
 }
 
 data class Subscribe(override val requestId: Long, val options: WampDict, val topic: TopicPattern) : Message(), RequestMessage {
     companion object {
-        const val TYPE = 32
+        val TYPE: Number = 32
     }
 
     override fun toJson(): String {
         val array = jsonArray {
             +TYPE
-            +requestId
+            +(requestId as Number)
             +JsonObject(options)
             +topic
         }
@@ -119,19 +119,19 @@ data class Subscribe(override val requestId: Long, val options: WampDict, val to
 
 data class Subscribed(override val requestId: Long, val subscription: Long) : Message(), RequestMessage {
     companion object {
-        const val TYPE = 33
+        val TYPE: Number = 33
     }
 }
 
 data class Unsubscribe(override val requestId: Long, val subscription: Long) : Message(), RequestMessage {
     companion object {
-        const val TYPE = 34
+        val TYPE: Number = 34
     }
 }
 
 data class Unsubscribed(override val requestId: Long) : Message(), RequestMessage {
     companion object {
-        const val TYPE = 35
+        val TYPE: Number = 35
     }
 }
 
@@ -165,6 +165,11 @@ private fun WampMessage.createMessage() = when (this[0].intOrNull) {
             arguments = this.getOrNull(4)?.jsonArray,
             argumentsKw = this.getOrNull(5)?.jsonObject?.content
     )
+    Event.TYPE -> Event(subscription = this[1].content.toLong(), publication = this[2].content.toLong(),
+            details = this.getOrNull(2)?.jsonObject?.content ?: emptyMap(),
+            arguments = this.getOrNull(3)?.jsonArray,
+            argumentsKw = this.getOrNull(4)?.jsonObject?.content)
+
     // TODO add other messages
     else -> Abort(details = emptyMap(), reason = "darum")
 }
