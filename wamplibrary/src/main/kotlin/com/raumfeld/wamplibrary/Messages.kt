@@ -86,17 +86,38 @@ data class Publish(
         override val requestId: Long,
         val options: WampDict?,
         val topic: String,
-        val arguments: List<Any?>? = null,
-        val argumentsKw: WampDict? = null
+        val arguments: List<JsonElement>,
+        val argumentsKw: WampDict
 ) : Message(), RequestMessage {
     companion object {
         val TYPE: Number = 16
+    }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +(requestId as Number)
+            +topic
+            +JsonArray(arguments)
+            +JsonObject(argumentsKw)
+        }
+        return Json.stringify(JsonArray.serializer(), array)
     }
 }
 
 data class Published(override val requestId: Long, val publication: Long) : Message(), RequestMessage {
     companion object {
         val TYPE: Number = 17
+    }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +(requestId as Number)
+            +(publication as Number)
+        }
+
+        return Json.stringify(JsonArray.serializer(), array)
     }
 }
 
@@ -121,6 +142,16 @@ data class Subscribed(override val requestId: Long, val subscription: Long) : Me
     companion object {
         val TYPE: Number = 33
     }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +(requestId as Number)
+            +(subscription as Number)
+        }
+
+        return Json.stringify(JsonArray.serializer(), array)
+    }
 }
 
 data class Unsubscribe(override val requestId: Long, val subscription: Long) : Message(), RequestMessage {
@@ -139,11 +170,24 @@ data class Event(
         val subscription: Long,
         val publication: Long,
         val details: WampDict,
-        val arguments: List<JsonElement>? = null,
-        val argumentsKw: WampDict? = null
+        val arguments: List<JsonElement>,
+        val argumentsKw: WampDict
 ) : Message() {
     companion object {
         const val TYPE = 36
+    }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +(subscription as Number)
+            +(publication as Number)
+            +JsonObject(details)
+            +JsonArray(arguments)
+            +JsonObject(argumentsKw)
+        }
+
+        return Json.stringify(JsonArray.serializer(), array)
     }
 }
 
@@ -160,13 +204,13 @@ private fun WampMessage.createMessage() = when (this[0].intOrNull) {
     Publish.TYPE -> Publish(requestId = this[1].content.toLong(),
             options = this[2].jsonObject.content,
             topic = this[3].content,
-            arguments = this.getOrNull(4)?.jsonArray,
-            argumentsKw = this.getOrNull(5)?.jsonObject?.content
+            arguments = this.getOrNull(4)?.jsonArray ?: emptyList(),
+            argumentsKw = this.getOrNull(5)?.jsonObject?.content ?: emptyMap()
     )
     Event.TYPE -> Event(subscription = this[1].content.toLong(), publication = this[2].content.toLong(),
             details = this.getOrNull(3)?.jsonObject?.content ?: emptyMap(),
-            arguments = this.getOrNull(4)?.jsonArray,
-            argumentsKw = this.getOrNull(5)?.jsonObject?.content)
+            arguments = this.getOrNull(4)?.jsonArray ?: emptyList(),
+            argumentsKw = this.getOrNull(5)?.jsonObject?.content ?: emptyMap())
 
     Subscribed.TYPE -> Subscribed(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
     // TODO add other messages

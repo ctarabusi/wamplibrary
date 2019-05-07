@@ -119,7 +119,7 @@ class ClientImpl(
 //    ) = caller.call(procedure, arguments, argumentsKw)
 
     override suspend fun disconnect(closeReason: String) = coroutineScope.launch {
-        val messageListener = messageListenersHandler.registerListener<Goodbye>(-1L) //TODO change this with type
+        val messageListener = messageListenersHandler.registerListener<Goodbye>(randomIdGenerator.newRandomId())
 
         connection.send(Goodbye(emptyMap(), closeReason))
 
