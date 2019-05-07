@@ -27,10 +27,13 @@ class Connection(
         }
     }
 
-    private suspend fun <R> processRawMessage(message: String, action: suspend (Message) -> R): R =
-            action(fromJsonToMessage(message)).apply {
-                log.d("Received $this")
-            }
+    private suspend fun <R> processRawMessage(messageJson: String, action: suspend (Message) -> R): R {
+        log.d("Received json: $messageJson")
+        val message = fromJsonToMessage(messageJson)
+        log.d("Mapped to: $message")
+
+        return action(message)
+    }
 
     suspend fun send(message: Message) = outgoing.send(message.toJson())
 
