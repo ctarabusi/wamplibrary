@@ -100,10 +100,10 @@ class ClientImpl(
                 Hello(
                         realmUri, mapOf(
                         "roles" to JsonObject(mapOf<String, JsonElement>(
-                                "publisher" to JsonNull,
-                                "subscriber" to JsonNull,
-                                "caller" to JsonNull,
-                                "callee" to JsonNull
+                                "publisher" to JsonObject(emptyMap()),
+                                "subscriber" to JsonObject(emptyMap()),
+                                "caller" to JsonObject(emptyMap()),
+                                "callee" to JsonObject(emptyMap())
                         ))
                 )
                 )
