@@ -74,17 +74,35 @@ data class Abort(val details: WampDict, val reason: String) : Message() {
     companion object {
         val TYPE: Number = 3
     }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +JsonObject(details)
+            +reason
+        }
+        return Json.stringify(JsonArray.serializer(), array)
+    }
 }
 
 data class Goodbye(val details: WampDict, val reason: String) : Message() {
     companion object {
         val TYPE: Number = 6
     }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +JsonObject(details)
+            +reason
+        }
+        return Json.stringify(JsonArray.serializer(), array)
+    }
 }
 
 data class Publish(
         override val requestId: Long,
-        val options: WampDict?,
+        val options: WampDict,
         val topic: String,
         val arguments: List<JsonElement>,
         val argumentsKw: WampDict
@@ -97,6 +115,7 @@ data class Publish(
         val array = jsonArray {
             +TYPE
             +(requestId as Number)
+            +JsonObject(options)
             +topic
             +JsonArray(arguments)
             +JsonObject(argumentsKw)
