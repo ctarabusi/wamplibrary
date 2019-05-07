@@ -85,6 +85,10 @@ class ClientImpl(
 
         when (message) {
        //     is Invocation -> callee.invokeProcedure(message)
+            is Welcome -> {
+                log.i("Session established. ID: ${message.session}")
+                sessionId = message.session
+            }
             is Event -> subscriber.receiveEvent(message)
 
          //   is Error -> exceptionCatcher.catchException(message.toWampErrorException())
@@ -104,10 +108,6 @@ class ClientImpl(
                 )
                 )
         )
-        connection.withNextMessage { message: Welcome ->
-            log.i("Session established. ID: ${message.session}")
-            sessionId = message.session
-        }.join()
     }
 
 //    override suspend fun register(procedure: Uri, handler: CallHandler) = callee.register(procedure, handler)
