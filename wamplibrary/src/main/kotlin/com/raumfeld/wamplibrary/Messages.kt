@@ -170,6 +170,7 @@ private fun WampMessage.createMessage() = when (this[0].intOrNull) {
             arguments = this.getOrNull(3)?.jsonArray,
             argumentsKw = this.getOrNull(4)?.jsonObject?.content)
 
+    Subscribed.TYPE -> Subscribed(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
     // TODO add other messages
     else -> Abort(details = emptyMap(), reason = "darum")
 }
