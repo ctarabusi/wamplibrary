@@ -145,10 +145,10 @@ fun fromJsonToMessage(messageJson: String): Message {
 
 private fun WampMessage.createMessage() = when (this[0].intOrNull) {
     Hello.TYPE -> Hello.create(this.drop(0))
-    Welcome.TYPE -> Welcome(session = this[1].long, details = this[2].jsonObject.content)
+    Welcome.TYPE -> Welcome(session = this[1].content.toLong(), details = this[2].jsonObject.content)
     Abort.TYPE -> Abort(details = this[1].jsonObject.content, reason = this[2].content)
     Goodbye.TYPE -> Goodbye(details = this[1].jsonObject.content, reason = this[2].content)
-    Publish.TYPE -> Publish(requestId = this[1].long,
+    Publish.TYPE -> Publish(requestId = this[1].content.toLong(),
             options = this[2].jsonObject.content,
             topic = this[3].content,
             arguments = this.getOrNull(4)?.jsonArray,
