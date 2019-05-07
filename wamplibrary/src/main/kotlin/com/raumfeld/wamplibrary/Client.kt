@@ -10,7 +10,6 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 
 interface Client {
@@ -26,8 +25,8 @@ interface Client {
 
     suspend fun publish(
             topic: String,
-            arguments: List<Any>? = null,
-            argumentsKw: WampDict? = null,
+            arguments: List<JsonElement>,
+            argumentsKw: WampDict,
             onPublished: (suspend (Long) -> Unit)? = null
     )
 
@@ -131,8 +130,8 @@ class ClientImpl(
 
     override suspend fun publish(
             topic: String,
-            arguments: List<Any>?,
-            argumentsKw: WampDict?,
+            arguments: List<JsonElement>,
+            argumentsKw: WampDict,
             onPublished: (suspend (Long) -> Unit)?
     ) = publisher.publish(topic, arguments, argumentsKw, onPublished)
 
