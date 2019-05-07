@@ -104,6 +104,17 @@ data class Subscribe(override val requestId: Long, val options: WampDict, val to
     companion object {
         const val TYPE = 32
     }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +requestId
+            +JsonObject(options)
+            +topic
+        }
+
+        return Json.stringify(JsonArray.serializer(), array)
+    }
 }
 
 data class Subscribed(override val requestId: Long, val subscription: Long) : Message(), RequestMessage {
