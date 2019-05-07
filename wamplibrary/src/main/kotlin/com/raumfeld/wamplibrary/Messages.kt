@@ -147,8 +147,6 @@ data class Event(
     }
 }
 
-
-
 fun fromJsonToMessage(messageJson: String): Message {
     val wampMessage = Json.parse(JsonArray.serializer(), messageJson)
     return wampMessage.createMessage()
@@ -166,9 +164,9 @@ private fun WampMessage.createMessage() = when (this[0].intOrNull) {
             argumentsKw = this.getOrNull(5)?.jsonObject?.content
     )
     Event.TYPE -> Event(subscription = this[1].content.toLong(), publication = this[2].content.toLong(),
-            details = this.getOrNull(2)?.jsonObject?.content ?: emptyMap(),
-            arguments = this.getOrNull(3)?.jsonArray,
-            argumentsKw = this.getOrNull(4)?.jsonObject?.content)
+            details = this.getOrNull(3)?.jsonObject?.content ?: emptyMap(),
+            arguments = this.getOrNull(4)?.jsonArray,
+            argumentsKw = this.getOrNull(5)?.jsonObject?.content)
 
     Subscribed.TYPE -> Subscribed(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
     // TODO add other messages
