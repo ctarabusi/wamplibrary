@@ -1,6 +1,5 @@
 package com.raumfeld.wamplibrary
 
-import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
 /*
@@ -177,11 +176,28 @@ data class Unsubscribe(override val requestId: Long, val subscription: Long) : M
     companion object {
         val TYPE: Number = 34
     }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +(requestId as Number)
+            +(subscription as Number)
+        }
+        return Json.stringify(JsonArray.serializer(), array)
+    }
 }
 
 data class Unsubscribed(override val requestId: Long) : Message(), RequestMessage {
     companion object {
         val TYPE: Number = 35
+    }
+
+    override fun toJson(): String {
+        val array = jsonArray {
+            +TYPE
+            +(requestId as Number)
+        }
+        return Json.stringify(JsonArray.serializer(), array)
     }
 }
 
@@ -226,12 +242,17 @@ private fun WampMessage.createMessage() = when (this[0].intOrNull) {
             arguments = this.getOrNull(4)?.jsonArray ?: emptyList(),
             argumentsKw = this.getOrNull(5)?.jsonObject?.content ?: emptyMap()
     )
+    Published.TYPE -> Published(requestId = this[1].content.toLong(), publication = this[2].content.toLong())
     Event.TYPE -> Event(subscription = this[1].content.toLong(), publication = this[2].content.toLong(),
             details = this.getOrNull(3)?.jsonObject?.content ?: emptyMap(),
             arguments = this.getOrNull(4)?.jsonArray ?: emptyList(),
             argumentsKw = this.getOrNull(5)?.jsonObject?.content ?: emptyMap())
 
+    Subscribe.TYPE -> Subscribe(requestId = this[1].content.toLong(), options = this[2].jsonObject.content, topic = this[3].content)
     Subscribed.TYPE -> Subscribed(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
+
+    Unsubscribe.TYPE -> Unsubscribe(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
+    Unsubscribed.TYPE -> Unsubscribed(requestId = this[1].content.toLong())
     // TODO add other messages
     else -> Abort(details = emptyMap(), reason = "darum")
 }
