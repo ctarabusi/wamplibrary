@@ -1,6 +1,6 @@
 package com.raumfeld.wamplibrary
 
-enum class WampClose(val uri: String) {
+enum class WampClose(val content: String) {
     // The Peer is shutting down completely - used as a GOODBYE (or ABORT) reason.
     SYSTEM_SHUTDOWN("wamp.close.system_shutdown"),
     // The Peer want to leave the realm - used as a GOODBYE reason.

@@ -4,7 +4,7 @@ import com.raumfeld.wamplibrary.*
 import java.util.concurrent.ConcurrentHashMap
 
 internal class Subscriber(
-        private val client: Client,
+        private val client: WampClient,
         private val randomIdGenerator: RandomIdGenerator,
         private val messageListenersHandler: MessageListenersHandler
 ) {

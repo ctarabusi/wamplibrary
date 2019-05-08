@@ -6,7 +6,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
 internal class Publisher(
-        private val client: Client,
+        private val client: WampClient,
         private val randomIdGenerator: RandomIdGenerator,
         private val messageListenersHandler: MessageListenersHandler
 ) {
