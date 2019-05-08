@@ -5,5 +5,5 @@ interface WebSocketCallback {
 
     fun onMessage(messageJson: String)
 
-    fun onClosed()
+    fun onClosing()
 }

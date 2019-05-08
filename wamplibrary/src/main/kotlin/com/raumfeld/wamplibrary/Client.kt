@@ -16,7 +16,7 @@ interface Client {
             onPublished: ((Long) -> Unit)? = null
     )
 
-    fun subscribe(topicPattern: String, onEventHandler: EventHandler, onSubscribedHandler: SubscribedHandler): SubscriptionHandle
+    fun subscribe(topicPattern: String, onEventHandler: EventHandler, onSubscribedHandler: SubscribedHandler)
 
     fun send(message: Message)
 }
@@ -71,7 +71,7 @@ class ClientImpl(val realm: String) : Client, WebSocketCallback {
     ))
     )
 
-    override fun onClosed() {
+    override fun onClosing() {
         messageListenersHandler.registerListener(randomIdGenerator.newRandomId()) { message ->
             (message as? Goodbye)?.let {
                 Logger.i("Router replied goodbye. Reason: ${it.reason}")
