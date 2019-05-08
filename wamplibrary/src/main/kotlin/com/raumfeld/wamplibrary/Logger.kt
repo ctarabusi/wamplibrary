@@ -2,7 +2,8 @@ package com.raumfeld.wamplibrary
 
 import android.util.Log
 
-class Logger {
+object Logger {
+    const val tag = "WampLibrary"
 
     fun v(msg: String) {
         Log.v(tag, msg)
@@ -27,8 +28,4 @@ class Logger {
     fun e(t: Throwable) = Log.e(tag, t.stackTrace.toString())
 
     fun e(msg: String, t: Throwable) = Log.e(tag, "$msg:\n${t.stackTrace}")
-
-    companion object {
-        const val tag = "WampLibrary"
-    }
 }

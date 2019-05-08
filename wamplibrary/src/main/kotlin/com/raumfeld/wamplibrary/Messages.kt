@@ -1,5 +1,6 @@
 package com.raumfeld.wamplibrary
 
+import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.*
 
 /*
@@ -42,7 +43,10 @@ interface RequestMessage {
 }
 
 abstract class Message {
-    open fun toJson(): String = ""
+    abstract fun toJsonArray(): JsonArray
+
+    @UnstableDefault
+    fun toJson() = Json.stringify(JsonArray.serializer(), toJsonArray())
 }
 
 data class Hello(val realm: String, val details: WampDict) : Message() {
@@ -52,20 +56,22 @@ data class Hello(val realm: String, val details: WampDict) : Message() {
         fun create(array: List<JsonElement>) = Hello(realm = array[1].content, details = array[2].jsonObject.content)
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +realm
-            +JsonObject(details)
-        }
-
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +realm
+        +JsonObject(details)
     }
 }
 
 data class Welcome(val session: Long, val details: WampDict) : Message() {
     companion object {
         val TYPE: Number = 2
+    }
+
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +session
+        +JsonObject(details)
     }
 }
 
@@ -74,13 +80,10 @@ data class Abort(val details: WampDict, val reason: String) : Message() {
         val TYPE: Number = 3
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +JsonObject(details)
-            +reason
-        }
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +JsonObject(details)
+        +reason
     }
 }
 
@@ -89,13 +92,10 @@ data class Goodbye(val details: WampDict, val reason: String) : Message() {
         val TYPE: Number = 6
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +JsonObject(details)
-            +reason
-        }
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +JsonObject(details)
+        +reason
     }
 }
 
@@ -110,16 +110,13 @@ data class Publish(
         val TYPE: Number = 16
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(requestId as Number)
-            +JsonObject(options)
-            +topic
-            +JsonArray(arguments)
-            +JsonObject(argumentsKw)
-        }
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(requestId as Number)
+        +JsonObject(options)
+        +topic
+        +JsonArray(arguments)
+        +JsonObject(argumentsKw)
     }
 }
 
@@ -128,31 +125,23 @@ data class Published(override val requestId: Long, val publication: Long) : Mess
         val TYPE: Number = 17
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(requestId as Number)
-            +(publication as Number)
-        }
-
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(requestId as Number)
+        +(publication as Number)
     }
 }
 
-data class Subscribe(override val requestId: Long, val options: WampDict, val topic: TopicPattern) : Message(), RequestMessage {
+data class Subscribe(override val requestId: Long, val options: WampDict, val topic: String) : Message(), RequestMessage {
     companion object {
         val TYPE: Number = 32
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(requestId as Number)
-            +JsonObject(options)
-            +topic
-        }
-
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(requestId as Number)
+        +JsonObject(options)
+        +topic
     }
 }
 
@@ -161,14 +150,10 @@ data class Subscribed(override val requestId: Long, val subscription: Long) : Me
         val TYPE: Number = 33
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(requestId as Number)
-            +(subscription as Number)
-        }
-
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(requestId as Number)
+        +(subscription as Number)
     }
 }
 
@@ -177,13 +162,10 @@ data class Unsubscribe(override val requestId: Long, val subscription: Long) : M
         val TYPE: Number = 34
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(requestId as Number)
-            +(subscription as Number)
-        }
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(requestId as Number)
+        +(subscription as Number)
     }
 }
 
@@ -192,12 +174,9 @@ data class Unsubscribed(override val requestId: Long) : Message(), RequestMessag
         val TYPE: Number = 35
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(requestId as Number)
-        }
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(requestId as Number)
     }
 }
 
@@ -212,17 +191,13 @@ data class Event(
         const val TYPE = 36
     }
 
-    override fun toJson(): String {
-        val array = jsonArray {
-            +TYPE
-            +(subscription as Number)
-            +(publication as Number)
-            +JsonObject(details)
-            +JsonArray(arguments)
-            +JsonObject(argumentsKw)
-        }
-
-        return Json.stringify(JsonArray.serializer(), array)
+    override fun toJsonArray() = jsonArray {
+        +TYPE
+        +(subscription as Number)
+        +(publication as Number)
+        +JsonObject(details)
+        +JsonArray(arguments)
+        +JsonObject(argumentsKw)
     }
 }
 
@@ -232,39 +207,27 @@ fun fromJsonToMessage(messageJson: String): Message {
 }
 
 private fun WampMessage.createMessage() = when (this[0].intOrNull) {
-    Hello.TYPE -> Hello.create(this.drop(0))
-    Welcome.TYPE -> Welcome(session = this[1].content.toLong(), details = this[2].jsonObject.content)
-    Abort.TYPE -> Abort(details = this[1].jsonObject.content, reason = this[2].content)
-    Goodbye.TYPE -> Goodbye(details = this[1].jsonObject.content, reason = this[2].content)
-    Publish.TYPE -> Publish(requestId = this[1].content.toLong(),
+    Hello.TYPE        -> Hello.create(this.drop(0))
+    Welcome.TYPE      -> Welcome(session = this[1].content.toLong(), details = this[2].jsonObject.content)
+    Abort.TYPE        -> Abort(details = this[1].jsonObject.content, reason = this[2].content)
+    Goodbye.TYPE      -> Goodbye(details = this[1].jsonObject.content, reason = this[2].content)
+    Publish.TYPE      -> Publish(requestId = this[1].content.toLong(),
             options = this[2].jsonObject.content,
             topic = this[3].content,
             arguments = this.getOrNull(4)?.jsonArray ?: emptyList(),
             argumentsKw = this.getOrNull(5)?.jsonObject?.content ?: emptyMap()
     )
-    Published.TYPE -> Published(requestId = this[1].content.toLong(), publication = this[2].content.toLong())
-    Event.TYPE -> Event(subscription = this[1].content.toLong(), publication = this[2].content.toLong(),
+    Published.TYPE    -> Published(requestId = this[1].content.toLong(), publication = this[2].content.toLong())
+    Event.TYPE        -> Event(subscription = this[1].content.toLong(), publication = this[2].content.toLong(),
             details = this.getOrNull(3)?.jsonObject?.content ?: emptyMap(),
             arguments = this.getOrNull(4)?.jsonArray ?: emptyList(),
             argumentsKw = this.getOrNull(5)?.jsonObject?.content ?: emptyMap())
 
-    Subscribe.TYPE -> Subscribe(requestId = this[1].content.toLong(), options = this[2].jsonObject.content, topic = this[3].content)
-    Subscribed.TYPE -> Subscribed(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
+    Subscribe.TYPE    -> Subscribe(requestId = this[1].content.toLong(), options = this[2].jsonObject.content, topic = this[3].content)
+    Subscribed.TYPE   -> Subscribed(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
 
-    Unsubscribe.TYPE -> Unsubscribe(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
+    Unsubscribe.TYPE  -> Unsubscribe(requestId = this[1].content.toLong(), subscription = this[2].content.toLong())
     Unsubscribed.TYPE -> Unsubscribed(requestId = this[1].content.toLong())
     // TODO add other messages
-    else -> Abort(details = emptyMap(), reason = "darum")
+    else              -> Abort(details = emptyMap(), reason = "darum")
 }
-
-//fun main() {
-//    val helloMessageJson = "[1, \"somerealm\", {\"roles\": {\"publisher\": {},\"subscriber\": {}}}]"
-//    val helloMessage: Message = fromJsonToMessage(helloMessageJson)
-//    println(helloMessage)
-//
-//    println("spitting out " + helloMessage.toJson())
-//
-//    val messageJson = "[16, 239714735, {}, \"com.myapp.mytopic1\", [], {\"color\": \"orange\", \"sizes\": [23, 42, 7]}]"
-//    val message: Message = fromJsonToMessage(messageJson)
-//    println(message)
-//}

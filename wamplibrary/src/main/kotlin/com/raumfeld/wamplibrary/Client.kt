@@ -13,13 +13,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 interface Client {
-//    suspend fun register(procedure: Uri, handler: CallHandler): RegistrationHandle
-//
-//    suspend fun call(
-//            procedure: Uri,
-//            arguments: List<Any?>? = null,
-//            argumentsKw: WampDict? = null
-//    ): DeferredCallResult
 
     suspend fun disconnect(closeReason: String = WampClose.SYSTEM_SHUTDOWN.uri): Job
 
@@ -30,7 +23,7 @@ interface Client {
             onPublished: (suspend (Long) -> Unit)? = null
     )
 
-    suspend fun subscribe(topicPattern: TopicPattern, eventHandler: EventHandler): SubscriptionHandle
+    suspend fun subscribe(topicPattern: String, eventHandler: EventHandler): SubscriptionHandle
 }
 
 class ClientImpl(
@@ -39,7 +32,6 @@ class ClientImpl(
         outgoing: SendChannel<String>,
         realm: String
 ) : Client {
-    private val log = Logger()
 
     private val connection = Connection(coroutineScope, incoming, outgoing)
 
@@ -48,9 +40,6 @@ class ClientImpl(
     private val randomIdGenerator = RandomIdGenerator()
 
     private val messageListenersHandler = MessageListenersHandler(coroutineScope)
-
-//    private val caller = Caller(connection, randomIdGenerator, messageListenersHandler)
-//    private val callee = Callee(connection, randomIdGenerator, messageListenersHandler)
 
     private val publisher = Publisher(connection, randomIdGenerator, messageListenersHandler)
     private val subscriber = Subscriber(connection, randomIdGenerator, messageListenersHandler)
@@ -85,7 +74,7 @@ class ClientImpl(
         when (message) {
        //     is Invocation -> callee.invokeProcedure(message)
             is Welcome -> {
-                log.i("Session established. ID: ${message.session}")
+                Logger.i("Session established. ID: ${message.session}")
                 sessionId = message.session
             }
             is Event -> subscriber.receiveEvent(message)
@@ -104,26 +93,17 @@ class ClientImpl(
                                 "caller" to JsonObject(emptyMap()),
                                 "callee" to JsonObject(emptyMap())
                         ))
-                )
-                )
+                ))
         )
     }
 
-//    override suspend fun register(procedure: Uri, handler: CallHandler) = callee.register(procedure, handler)
-
-//    override suspend fun call(
-//            procedure: Uri,
-//            arguments: List<Any?>?,
-//            argumentsKw: WampDict?
-//    ) = caller.call(procedure, arguments, argumentsKw)
-
     override suspend fun disconnect(closeReason: String) = coroutineScope.launch {
-        val messageListener = messageListenersHandler.registerListener<Goodbye>(randomIdGenerator.newRandomId())
+        val messageListener = messageListenersHandler.registerListenerWithErrorHandler<Goodbye>(randomIdGenerator.newRandomId())
 
         connection.send(Goodbye(emptyMap(), closeReason))
 
         messageListener.await().let { message ->
-            log.i("Router replied goodbye. Reason: ${message.reason}")
+            Logger.i("Router replied goodbye. Reason: ${message.reason}")
             message.reason
         }
     }
@@ -136,7 +116,7 @@ class ClientImpl(
     ) = publisher.publish(topic, arguments, argumentsKw, onPublished)
 
     override suspend  fun subscribe(
-            topicPattern: TopicPattern,
+            topicPattern: String,
             eventHandler: EventHandler
     ) = subscriber.subscribe(topicPattern, eventHandler)
 }

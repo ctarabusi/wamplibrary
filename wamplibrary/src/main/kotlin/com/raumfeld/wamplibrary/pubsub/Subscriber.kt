@@ -10,15 +10,13 @@ internal class Subscriber(
 ) {
     private val subscriptions = ConcurrentHashMap<Long, EventHandler>()
 
-    private val logger = Logger()
-
-    suspend fun subscribe(topic: TopicPattern, eventHandler: EventHandler): SubscriptionHandle {
+    suspend fun subscribe(topic: String, eventHandler: EventHandler): SubscriptionHandle {
         val subscribed = createSubscription(topic)
         subscriptions[subscribed.subscription] = eventHandler
         return SubscriptionHandle { unsubscribe(subscribed.subscription) }
     }
 
-    private suspend fun createSubscription(topic: TopicPattern): Subscribed {
+    private suspend fun createSubscription(topic: String): Subscribed {
         randomIdGenerator.newRandomId().also { requestId ->
             val messageListener = messageListenersHandler.registerListenerWithErrorHandler<Subscribed>(requestId)
 
@@ -37,12 +35,7 @@ internal class Subscriber(
         randomIdGenerator.newRandomId().also { requestId ->
             val messageListener = messageListenersHandler.registerListenerWithErrorHandler<Unsubscribed>(requestId)
 
-            connection.send(
-                    Unsubscribe(
-                            requestId,
-                            subscriptionId
-                    )
-            )
+            connection.send(Unsubscribe(requestId, subscriptionId))
             messageListener.await()
         }
     }
@@ -52,7 +45,7 @@ internal class Subscriber(
                 eventMessage.arguments,
                 eventMessage.argumentsKw
         )
-                ?: logger.w("Got an event (${eventMessage.publication}) for a subscription we don't have (${eventMessage.subscription})")
+                ?: Logger.w("Got an event (${eventMessage.publication}) for a subscription we don't have (${eventMessage.subscription})")
     }
 }
 

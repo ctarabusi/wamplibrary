@@ -16,7 +16,7 @@ internal class Publisher(
             connection.send(Publish(requestId, optionsMap, topic, arguments, argumentsKw))
 
             if (onPublished != null) {
-                val published = messageListenersHandler.registerListener<Published>(requestId).await()
+                val published = messageListenersHandler.registerListenerWithErrorHandler<Published>(requestId).await()
                 onPublished(published.publication)
             }
         }

@@ -12,8 +12,6 @@ class Connection(
         private val outgoing: SendChannel<String>
 ) {
 
-    val log = Logger()
-
     fun forEachMessage(exceptionHandler: (Throwable) -> Unit, action: suspend (Message) -> Unit) = coroutineScope.launch {
         incoming.consumeEach { message ->
             try {
@@ -25,9 +23,9 @@ class Connection(
     }
 
     private suspend fun <R> processRawMessage(messageJson: String, action: suspend (Message) -> R): R {
-        log.d("Received json: $messageJson")
+        Logger.d("Received json: $messageJson")
         val message = fromJsonToMessage(messageJson)
-        log.d("Mapped to: $message")
+        Logger.d("Mapped to: $message")
 
         return action(message)
     }
