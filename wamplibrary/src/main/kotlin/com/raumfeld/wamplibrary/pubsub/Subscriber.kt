@@ -4,39 +4,49 @@ import com.raumfeld.wamplibrary.*
 import java.util.concurrent.ConcurrentHashMap
 
 internal class Subscriber(
-        private val connection: Connection,
+        private val client: Client,
         private val randomIdGenerator: RandomIdGenerator,
         private val messageListenersHandler: MessageListenersHandler
 ) {
     private val subscriptions = ConcurrentHashMap<Long, EventHandler>()
 
-    suspend fun subscribe(topic: String, eventHandler: EventHandler): SubscriptionHandle {
-        val subscribed = createSubscription(topic)
-        subscriptions[subscribed.subscription] = eventHandler
-        return SubscriptionHandle { unsubscribe(subscribed.subscription) }
+    fun subscribe(topic: String, eventHandler: EventHandler,
+                  subscribedHandler: SubscribedHandler): SubscriptionHandle {
+        val requestIdSubscribed = createSubscription(topic) {
+            subscribed -> subscribedHandler.invoke(subscribed)
+        }
+        subscriptions[requestIdSubscribed] = eventHandler
+        return SubscriptionHandle { unsubscribe(requestIdSubscribed) }
     }
 
-    private suspend fun createSubscription(topic: String): Subscribed {
+    private fun createSubscription(topic: String,
+                                   onSubscribed: (Subscribed) -> Unit): Long {
         randomIdGenerator.newRandomId().also { requestId ->
-            val messageListener = messageListenersHandler.registerListenerWithErrorHandler<Subscribed>(requestId)
-
-            connection.send(Subscribe(requestId, emptyMap(), topic))
-
-            return messageListener.await()
+            messageListenersHandler.registerListener(requestId) { message ->
+                (message as? Subscribed)?.let {
+                    Logger.i("Subscribed " + it.requestId)
+                    onSubscribed.invoke(it)
+                }
+            }
+            client.send(Subscribe(requestId, emptyMap(), topic))
+            return requestId
         }
     }
 
-    private suspend fun unsubscribe(subscriptionId: Long) {
+    private fun unsubscribe(subscriptionId: Long) {
         subscriptions.remove(subscriptionId)
         unsubscribeFromRouter(subscriptionId)
     }
 
-    private suspend fun unsubscribeFromRouter(subscriptionId: Long) {
+    private fun unsubscribeFromRouter(subscriptionId: Long) {
         randomIdGenerator.newRandomId().also { requestId ->
-            val messageListener = messageListenersHandler.registerListenerWithErrorHandler<Unsubscribed>(requestId)
+            messageListenersHandler.registerListener(requestId) { message ->
+                (message as? Unsubscribed)?.let {
+                    Logger.i("Unsubscribed " + it.requestId)
+                }
+            }
 
-            connection.send(Unsubscribe(requestId, subscriptionId))
-            messageListener.await()
+            client.send(Unsubscribe(requestId, subscriptionId))
         }
     }
 
@@ -49,8 +59,9 @@ internal class Subscriber(
     }
 }
 
+typealias SubscribedHandler = (subscribed: Subscribed) -> Unit
 typealias EventHandler = (arguments: List<Any>?, argumentsKw: Map<String, Any>?) -> Unit
 
-class SubscriptionHandle(val unsubscribeCallback: suspend () -> Unit) {
-    suspend fun unsubscribe() = unsubscribeCallback()
+class SubscriptionHandle(val unsubscribeCallback: () -> Unit) {
+    fun unsubscribe() = unsubscribeCallback()
 }

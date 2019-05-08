@@ -1,122 +1,96 @@
 package com.raumfeld.wamplibrary
 
-import com.raumfeld.wamplibrary.pubsub.EventHandler
+import com.raumfeld.wamplibrary.pubsub.*
 import com.raumfeld.wamplibrary.pubsub.Publisher
 import com.raumfeld.wamplibrary.pubsub.Subscriber
-import com.raumfeld.wamplibrary.pubsub.SubscriptionHandle
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.launch
+import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 interface Client {
 
-    suspend fun disconnect(closeReason: String = WampClose.SYSTEM_SHUTDOWN.uri): Job
-
-    suspend fun publish(
+    fun publish(
             topic: String,
             arguments: List<JsonElement>,
             argumentsKw: WampDict,
-            onPublished: (suspend (Long) -> Unit)? = null
+            onPublished: ((Long) -> Unit)? = null
     )
 
-    suspend fun subscribe(topicPattern: String, eventHandler: EventHandler): SubscriptionHandle
+    fun subscribe(topicPattern: String, onEventHandler: EventHandler, onSubscribedHandler: SubscribedHandler): SubscriptionHandle
+
+    fun send(message: Message)
 }
 
-class ClientImpl(
-        val coroutineScope: CoroutineScope,
-        incoming: ReceiveChannel<String>,
-        outgoing: SendChannel<String>,
-        realm: String
-) : Client {
-
-    private val connection = Connection(coroutineScope, incoming, outgoing)
+class ClientImpl(val realm: String) : Client, WebSocketCallback {
 
     private var sessionId: Long? = null
 
     private val randomIdGenerator = RandomIdGenerator()
 
-    private val messageListenersHandler = MessageListenersHandler(coroutineScope)
+    private val messageListenersHandler = MessageListenersHandler()
 
-    private val publisher = Publisher(connection, randomIdGenerator, messageListenersHandler)
-    private val subscriber = Subscriber(connection, randomIdGenerator, messageListenersHandler)
+    private val publisher = Publisher(this, randomIdGenerator, messageListenersHandler)
+    private val subscriber = Subscriber(this, randomIdGenerator, messageListenersHandler)
 
-    init {
+    private var webSocketDelegate: WebSocketDelegate? = null
+
+    override fun onOpen(webSocketDelegate: WebSocketDelegate) {
+        this.webSocketDelegate = webSocketDelegate
 
         joinRealm(realm)
-
-        coroutineScope.launch {
-            connection.forEachMessage(exceptionHandler()) {
-             //   try {
-                    handleMessage(it)
-//                } catch (nonFatalError: WampErrorException) {
-//                    exceptionCatcher.catchException(nonFatalError)
-//                }
-            }.invokeOnCompletion { fatalException ->
-                fatalException?.run { printStackTrace() }
-            }
-        }
     }
 
-    private fun exceptionHandler(): (Throwable) -> Unit = { throwable ->
-        when (throwable) {
-          //  is WampErrorException -> exceptionCatcher.catchException(throwable)
-            else -> throw throwable
-        }
-    }
+    override fun onMessage(messageJson: String) {
+        Logger.d("Received json: $messageJson")
+        val message = fromJsonToMessage(messageJson)
+        Logger.d("Mapped to: $message")
 
-    private fun handleMessage(message: Message) {
         messageListenersHandler.notifyListeners(message)
 
         when (message) {
-       //     is Invocation -> callee.invokeProcedure(message)
+            //     is Invocation -> callee.invokeProcedure(message)
             is Welcome -> {
                 Logger.i("Session established. ID: ${message.session}")
                 sessionId = message.session
             }
-            is Event -> subscriber.receiveEvent(message)
-
-         //   is Error -> exceptionCatcher.catchException(message.toWampErrorException())
+            is Event   -> subscriber.receiveEvent(message)
         }
     }
 
-    private fun joinRealm(realmUri: String) = coroutineScope.launch {
-        connection.send(
-                Hello(
-                        realmUri, mapOf(
-                        "roles" to JsonObject(mapOf<String, JsonElement>(
-                                "publisher" to JsonObject(emptyMap()),
-                                "subscriber" to JsonObject(emptyMap()),
-                                "caller" to JsonObject(emptyMap()),
-                                "callee" to JsonObject(emptyMap())
-                        ))
-                ))
-        )
-    }
+    @UnstableDefault
+    override fun send(message: Message) = webSocketDelegate?.send(message.toJson()) ?: Unit
 
-    override suspend fun disconnect(closeReason: String) = coroutineScope.launch {
-        val messageListener = messageListenersHandler.registerListenerWithErrorHandler<Goodbye>(randomIdGenerator.newRandomId())
+    private fun joinRealm(realmUri: String) = send(Hello(
+            realmUri, mapOf(
+            "roles" to JsonObject(mapOf<String, JsonElement>(
+                    "publisher" to JsonObject(emptyMap()),
+                    "subscriber" to JsonObject(emptyMap()),
+                    "caller" to JsonObject(emptyMap()),
+                    "callee" to JsonObject(emptyMap())
+            ))
+    ))
+    )
 
-        connection.send(Goodbye(emptyMap(), closeReason))
-
-        messageListener.await().let { message ->
-            Logger.i("Router replied goodbye. Reason: ${message.reason}")
-            message.reason
+    override fun onClosed() {
+        messageListenersHandler.registerListener(randomIdGenerator.newRandomId()) { message ->
+            (message as? Goodbye)?.let {
+                Logger.i("Router replied goodbye. Reason: ${it.reason}")
+            }
         }
+
+        send(Goodbye(emptyMap(), reason = WampClose.SYSTEM_SHUTDOWN.uri))
     }
 
-    override suspend fun publish(
+    override fun publish(
             topic: String,
             arguments: List<JsonElement>,
             argumentsKw: WampDict,
-            onPublished: (suspend (Long) -> Unit)?
+            onPublished: ((Long) -> Unit)?
     ) = publisher.publish(topic, arguments, argumentsKw, onPublished)
 
-    override suspend  fun subscribe(
+    override fun subscribe(
             topicPattern: String,
-            eventHandler: EventHandler
-    ) = subscriber.subscribe(topicPattern, eventHandler)
+            onEventHandler: EventHandler,
+            onSubscribedHandler: SubscribedHandler
+    ) = subscriber.subscribe(topicPattern, onEventHandler, onSubscribedHandler)
 }

@@ -1,8 +1,6 @@
 package com.raumfeld.wamplibrary
 
-import android.net.Uri
-
-enum class WampError(uri: String) {
+enum class WampError(text: String) {
     // Peer provided an incorrect URI for any URI-based attribute of WAMP message, such as realm, topic or procedure
     INVALID_URI("wamp.error.invalid_uri"),
     // A Dealer could not perform a call, since no procedure is currently registered under the given URI.
@@ -35,7 +33,4 @@ enum class WampError(uri: String) {
     OPTION_DISALLOWED_DISCLOSE_ME("wamp.error.option_disallowed.disclose_me"),
     // A Router encountered a network failure
     NETWORK_FAILURE("wamp.error.network_failure");
-
-
-    val uri = Uri.parse(uri)
 }
