@@ -9,6 +9,10 @@ interface WampClient {
     fun send(message: Message)
 
     fun onSessionReady(onSessionReady: (WampSession) -> Unit)
+
+    fun onSessionClosing(onSessionClosing: (WampSession) -> Unit)
+
+    fun close()
 }
 
 class WampClientImpl(val realm: String) : WampClient, WebSocketCallback {
@@ -18,6 +22,7 @@ class WampClientImpl(val realm: String) : WampClient, WebSocketCallback {
     private var webSocketDelegate: WebSocketDelegate? = null
 
     private var onSessionReady: ((WampSession) -> Unit)? = null
+    private var onSessionClosing: ((WampSession) -> Unit)? = null
 
     override fun onOpen(webSocketDelegate: WebSocketDelegate) {
         this.webSocketDelegate = webSocketDelegate
@@ -25,8 +30,16 @@ class WampClientImpl(val realm: String) : WampClient, WebSocketCallback {
         joinRealm(realm)
     }
 
+    override fun close() {
+        this.webSocketDelegate?.close()
+    }
+
     override fun onSessionReady(onSessionReady: (WampSession) -> Unit) {
         this.onSessionReady = onSessionReady
+    }
+
+    override fun onSessionClosing(onSessionClosing: (WampSession) -> Unit) {
+        this.onSessionClosing = onSessionClosing
     }
 
     override fun onMessage(messageJson: String) {
@@ -63,6 +76,8 @@ class WampClientImpl(val realm: String) : WampClient, WebSocketCallback {
     )
 
     override fun onClosing() {
+        onSessionClosing?.invoke(wampSession)
+
         wampSession.onClosing()
     }
 }
